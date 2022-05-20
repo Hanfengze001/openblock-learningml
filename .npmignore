@@ -1,0 +1,18 @@
+# Development files
+.eslintrc.js
+/.editorconfig
+/.eslintignore
+/.gitattributes
+/.github
+/.travis.yml
+/test
+
+# Coverage created files
+/.nyc_output
+/coverage
+
+# Resource files
+/learningml
+
+# build generate files
+
