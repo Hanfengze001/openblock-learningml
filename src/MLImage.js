@@ -1,5 +1,5 @@
 const tf = require('@tensorflow/tfjs');
-// require('@tensorflow/tfjs-node');
+require('@tensorflow/tfjs-node');
 const path = require('path');
 const fs = require('fs');
 
@@ -25,7 +25,7 @@ class MLImage {
         this.loadDataset();
     }
 
-    updaeDataSet (imageLabels, datasetLabels, datasetData) {
+    updateDataSet (imageLabels, datasetLabels, datasetData) {
         this.buildDataset(datasetLabels, datasetData);
         this.labels = imageLabels;
         const imageModelInfo = {
@@ -45,7 +45,9 @@ class MLImage {
         const modelPath = path.join(__dirname, '../models/model.json');
         console.log('path ', modelPath);
         this.modelStatus = false;
-        return tf.loadLayersModel('file://./models/model.json')
+        // return tf.loadLayersModel('https://127.0.0.1:20113/models/model.json')
+        // return tf.loadLayersModel('file://E:/code/openblock/openblock-learningml/models/model.json')
+        return tf.loadLayersModel('file://path/to/models/model.json')
             .then(tm => {
                 this.targetModel = tm;
                 this.modelStatus = true;
@@ -56,30 +58,38 @@ class MLImage {
 
     loadDataset () {
         // 异步读取
-        fs.readFile('./models/imageModel.txt', (err, data) => {
-            if (err) {
-                this.datasetStatus = false;
-                return console.error('readFile imageModel failed', err);
-            }
-            // console.log('data', data.toString());
-            // console.log('data length', data.length);
-            if (data.length > 0) {
-                const modelData = JSON.parse(data.toString());
-                this.labels = modelData.imageLabels;
-                this.buildDataset(modelData.imageDataset.labels,
-                    modelData.imageDataset.dataArray);
-                
-                if (this.labels && this.dataset.labels && this.dataset.dataArray) {
-                    this.datasetStatus = true;
-                    console.log('Load image dataset success');
-                } else {
-                    console.log('Load image dataset failed');
-                    this.datasetStatus = false;
-                }
-            } else {
+        const filePath = './models/imageModel.txt';
+        fs.stat(filePath, (err, stat) => {
+            if (!stat || !stat.isFile() || err) {
                 console.log('No image dataset');
                 this.datasetStatus = false;
+                return;
             }
+            fs.readFile(filePath, (error, data) => {
+                if (error) {
+                    this.datasetStatus = false;
+                    return console.error('readFile imageModel failed', error);
+                }
+                // console.log('data', data.toString());
+                // console.log('data length', data.length);
+                if (data.length > 0) {
+                    const modelData = JSON.parse(data.toString());
+                    this.labels = modelData.imageLabels;
+                    this.buildDataset(modelData.imageDataset.labels,
+                        modelData.imageDataset.dataArray);
+                    
+                    if (this.labels && this.dataset.labels && this.dataset.dataArray) {
+                        this.datasetStatus = true;
+                        console.log('Load image dataset success');
+                    } else {
+                        console.log('Load image dataset failed');
+                        this.datasetStatus = false;
+                    }
+                } else {
+                    console.log('No image dataset');
+                    this.datasetStatus = false;
+                }
+            });
         });
     }
 

@@ -7,7 +7,8 @@ const https = require('https');
 const clc = require('cli-color');
 const multiparty = require('multiparty');
 
-const MLImage = require('./image');
+const MLImage = require('./MLImage');
+const MLText = require('./MLText');
 
 /**
  * Configuration the default host.
@@ -50,7 +51,7 @@ class MLServer extends Emitter{
         this._port = DEFAULT_PORT;
 
         this.image = new MLImage();
-        // this._formatMessage = {};
+        this.mlText = new MLText();
     }
 
     isSameServer (host, port) {
@@ -106,32 +107,40 @@ class MLServer extends Emitter{
 
         // 执行分析算法
         this._app.post('/get/:type/:reqtype', (req, res) => {
+            console.log('post /get/:type/:reqtype');
             const type = req.params.type; // image or text
             const reqtype = req.params.reqtype; // 1:classify 2:confidence
-            const src = req.body.pic;
-            console.log('type', type);
-            console.log('reqtype', reqtype);
 
             let resStr;
-            if (type === this.image.type) {
+            if (type === this.mlImage.type) {
+                const src = req.body.pic;
                 if (reqtype === '1') {
-                    resStr = this.image.classifyImage(src);
+                    resStr = this.mlImage.classifyImage(src);
                 } else if (reqtype === '2') {
-                    resStr = this.image.confidenceImage(src);
+                    resStr = this.mlImage.confidenceImage(src);
                 } else {
                     resStr = 'COMMAND ERROR';
                 }
                 console.log('resStr', resStr);
                 res.send(resStr);
-            // } else if (type === this.devices.type) {
-            //     this.generate18nCache(locale);
-            //     res.send(this.deviceIndexData[`${locale}`]);
-            // }
+            } else if (type === this.mlText.type) {
+                const text = req.body.text;
+                console.log('text', text);
+                if (reqtype === '1') {
+                    resStr = this.mlText.classifyText(text);
+                } else if (reqtype === '2') {
+                    resStr = this.mlText.confidenceText(text);
+                } else {
+                    resStr = 'COMMAND ERROR';
+                }
+                console.log('resStr', resStr);
+                res.send(resStr);
             }
         });
 
         // 上传model文件
         this._app.post('/upload', async (req, res) => {
+            console.log('post /upload');
             /* 生成multiparty对象，并配置上传目标路径 */
             const form = new multiparty.Form();
             form.encoding = 'utf-8';
@@ -156,7 +165,7 @@ class MLServer extends Emitter{
                     // oldPath  不得作更改，使用默认上传路径就好
                     fs.renameSync(binFile.path, newPath);
                     res.send('ok');
-                    this.image.loadTargetModel();
+                    // this.mlImage.loadTargetModel();
                 } catch (e) {
                     console.log(e);
                     res.send('failed');
@@ -166,13 +175,17 @@ class MLServer extends Emitter{
 
         // 上传label和dataset
         this._app.post('/save/:reqtype', (req, res) => {
+            console.log('post /save/:reqtype');
             const reqtype = req.params.reqtype; // image or text
             res.send('ok');
+            console.log('reqtype', reqtype);
             if (reqtype === 'image') {
-                // this.image.updaeDataSet(req.body.imageDataset);
                 const dataSet = JSON.parse(req.body.imageDataset);
-                this.image.updaeDataSet(JSON.parse(req.body.imageLabels),
+                this.mlImage.updateDataSet(JSON.parse(req.body.imageLabels),
                     dataSet.labels, dataSet.dataArray);
+            } else if (reqtype === 'text') {
+                console.log('model', req.body.model);
+                this.mlText.updateModel(req.body.model);
             }
         });
 
