@@ -10,6 +10,11 @@ const multiparty = require('multiparty');
 const MLImage = require('./MLImage');
 const MLText = require('./MLText');
 
+
+const exarttemp = require('express-art-template');
+// 路由文件
+const indexRouter = require('./router');
+
 /**
  * Configuration the default host.
  * @readonly
@@ -50,7 +55,7 @@ class MLServer extends Emitter{
         this._host = DEFAULT_HOST;
         this._port = DEFAULT_PORT;
 
-        this.image = new MLImage();
+        this.mlImage = new MLImage();
         this.mlText = new MLText();
     }
 
@@ -98,22 +103,32 @@ class MLServer extends Emitter{
             next();
         });
         
+        console.log('_mlPath', this._mlPath);
         this._app.use(express.json({limit: '50mb'}));
         this._app.use(express.static(`${this._mlPath}`));
+        this._app.engine('html', exarttemp);
 
-        this._app.get('/', (req, res) => {
-            res.send(SERVER_NAME);
+        // 使用路由
+        this._app.use(indexRouter);
+
+        // this._app.get('/', (req, res) => {
+        //     res.send(SERVER_NAME);
+        // });
+        this._app.get('/labels', (req, res) => {
+            res.send(JSON.stringify(this.mlImage.labels));
         });
 
         // 执行分析算法
         this._app.post('/get/:type/:reqtype', (req, res) => {
             console.log('post /get/:type/:reqtype');
+            console.log('params', req.params);
             const type = req.params.type; // image or text
             const reqtype = req.params.reqtype; // 1:classify 2:confidence
 
             let resStr;
             if (type === this.mlImage.type) {
                 const src = req.body.pic;
+                console.log('pic', src);
                 if (reqtype === '1') {
                     resStr = this.mlImage.classifyImage(src);
                 } else if (reqtype === '2') {
@@ -144,7 +159,7 @@ class MLServer extends Emitter{
             /* 生成multiparty对象，并配置上传目标路径 */
             const form = new multiparty.Form();
             form.encoding = 'utf-8';
-            form.uploadDir = './models';
+            form.uploadDir = './learningml';
             // 设置文件大小限制
             // form.maxFilesSize = 1 * 1024 * 1024;
             form.parse(req, (err, fields, files) => {

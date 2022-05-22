@@ -19,7 +19,7 @@ class MLTEXT {
 
     updateModel (modelJSON) {
         this.modelStatus = false;
-        fs.writeFile('./models/textModel.txt', modelJSON, err => {
+        fs.writeFile('./learningml/textModel.txt', modelJSON, err => {
             if (err) {
                 console.log('writeFile textModel.txt failed', err);
             } else {
@@ -30,7 +30,7 @@ class MLTEXT {
     }
 
     loadTargetModel () {
-        const filePath = './models/textModel.txt';
+        const filePath = './learningml/textModel.txt';
         fs.stat(filePath, (err, stat) => {
             // console.log('stat', stat);
             // console.log('isFile', stat.isFile());
@@ -96,6 +96,7 @@ class MLTEXT {
 
     classifyText (text) {
         let retStr = 'NO MODELS';
+        console.log('text modelStatus', this.modelStatus);
         if (this.modelStatus) {
             retStr = this.modelFunction(text).label;
         }

@@ -7,7 +7,7 @@ const MLServer = require('./src/server');
  * The path of default user data directory.
  * @readonly
  */
-const DEFAULT_ML_PATH = path.join(__dirname, '../');
+const DEFAULT_ML_PATH = path.join(__dirname, './learningml');
 
 class LearningMLServer extends Emitter{
     constructor (mlPath) {

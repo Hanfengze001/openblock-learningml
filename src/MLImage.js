@@ -1,9 +1,10 @@
 const tf = require('@tensorflow/tfjs');
 require('@tensorflow/tfjs-node');
-const path = require('path');
 const fs = require('fs');
+const mobilenetModule = require('@tensorflow-models/mobilenet');
 
 const TYPE = 'image';
+const IMAGE_SIZE = 227;
 
 /**
  * A server to provide local devices resource.
@@ -20,9 +21,16 @@ class MLImage {
         this.targetModel = null;
         this.modelStatus = false;
         this.datasetStatus = false;
-
+        this.loadMobilenet();
         this.loadTargetModel();
         this.loadDataset();
+    }
+
+    loadMobilenet () {
+        mobilenetModule.load().then(m => {
+            console.log(m);
+            this.mobilenet = m;
+        });
     }
 
     updateDataSet (imageLabels, datasetLabels, datasetData) {
@@ -32,46 +40,48 @@ class MLImage {
             imageLabels: this.labels,
             imageDataset: this.dataset
         };
-        fs.writeFile('./models/imageModel.txt', JSON.stringify(imageModelInfo), err => {
+        fs.writeFile('./learningml/imageModel.txt', JSON.stringify(imageModelInfo), err => {
             if (err) {
                 console.log('writeFile imageModel.txt failed', err);
+                this.datasetStatus = false;
             } else {
                 console.log('writeFile imageModel.txt success');
+                this.datasetStatus = true;
             }
         });
     }
 
     loadTargetModel () {
-        const modelPath = path.join(__dirname, '../models/model.json');
-        console.log('path ', modelPath);
         this.modelStatus = false;
-        // return tf.loadLayersModel('https://127.0.0.1:20113/models/model.json')
-        // return tf.loadLayersModel('file://E:/code/openblock/openblock-learningml/models/model.json')
-        return tf.loadLayersModel('file://path/to/models/model.json')
-            .then(tm => {
-                this.targetModel = tm;
-                this.modelStatus = true;
-                console.log('Load targeModel');
-                return tm;
-            });
+        const filePath = './learningml/model.json';
+        fs.stat(filePath, (err, stat) => {
+            if (!stat || !stat.isFile() || err) {
+                console.log('Load targeModel failed, No image model');
+                return;
+            }
+            tf.loadLayersModel('file://learningml/model.json')
+                .then(tm => {
+                    this.targetModel = tm;
+                    this.modelStatus = true;
+                    console.log('Load targeModel');
+                    return tm;
+                });
+        });
     }
 
     loadDataset () {
+        this.datasetStatus = false;
         // 异步读取
-        const filePath = './models/imageModel.txt';
+        const filePath = './learningml/imageModel.txt';
         fs.stat(filePath, (err, stat) => {
             if (!stat || !stat.isFile() || err) {
                 console.log('No image dataset');
-                this.datasetStatus = false;
                 return;
             }
             fs.readFile(filePath, (error, data) => {
                 if (error) {
-                    this.datasetStatus = false;
                     return console.error('readFile imageModel failed', error);
                 }
-                // console.log('data', data.toString());
-                // console.log('data length', data.length);
                 if (data.length > 0) {
                     const modelData = JSON.parse(data.toString());
                     this.labels = modelData.imageLabels;
@@ -83,11 +93,9 @@ class MLImage {
                         console.log('Load image dataset success');
                     } else {
                         console.log('Load image dataset failed');
-                        this.datasetStatus = false;
                     }
                 } else {
                     console.log('No image dataset');
-                    this.datasetStatus = false;
                 }
             });
         });
@@ -107,7 +115,20 @@ class MLImage {
         }
     }
 
+    extractFeature (image) {
+        image.width = IMAGE_SIZE;
+        image.height = IMAGE_SIZE;
+        const tImage = tf.browser.fromPixels(image);
+        const tActivation = this.mobilenet.infer(tImage, 'conv_preds');
+        tImage.dispose();
+        return tActivation;
+    }
+
     _classifyImage (tActivation) {
+        // console.log('image pic', image);
+        // const tActivation = this.extractFeature(image);
+        tActivation = JSON.parse(tActivation);
+        console.log('image tActivation', tActivation);
         const prediction = this.targetModel.predict(tActivation);
 
         const predictions = prediction.dataSync();
