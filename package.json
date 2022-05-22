@@ -14,7 +14,8 @@
   },
   "author": "liucy",
   "dependencies": {
-    "@tensorflow/tfjs-node": "^1.0.2",
+    "@tensorflow/tfjs-node": "1.7.4",
+    "node-pre-gyp": "0.14.0",
     "art-template": "^4.13.2",
     "brain-text": "1.1.27",
     "cli-color": "^2.0.1",
@@ -28,7 +29,6 @@
     "hash-files": "^1.1.1",
     "lodash": "^4.17.21",
     "ml5": "^0.10.5",
-    "node-abort-controller": "^3.0.1",
     "node-fetch": "^2.6.7",
     "node-fetch-progress": "^1.0.2",
     "openblock-parse-release-message": "0.0.1",
