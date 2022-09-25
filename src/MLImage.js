@@ -1,10 +1,8 @@
 const tf = require('@tensorflow/tfjs');
 require('@tensorflow/tfjs-node');
 const fs = require('fs');
-const mobilenetModule = require('@tensorflow-models/mobilenet');
 
 const TYPE = 'image';
-const IMAGE_SIZE = 227;
 
 /**
  * A server to provide local devices resource.
@@ -21,16 +19,8 @@ class MLImage {
         this.targetModel = null;
         this.modelStatus = false;
         this.datasetStatus = false;
-        this.loadMobilenet();
         this.loadTargetModel();
         this.loadDataset();
-    }
-
-    loadMobilenet () {
-        mobilenetModule.load().then(m => {
-            console.log(m);
-            this.mobilenet = m;
-        });
     }
 
     updateDataSet (imageLabels, datasetLabels, datasetData) {
@@ -61,6 +51,7 @@ class MLImage {
             }
             tf.loadLayersModel('file://learningml/model.json')
                 .then(tm => {
+                    console.log('targetModel', tm);
                     this.targetModel = tm;
                     this.modelStatus = true;
                     console.log('Load targeModel');
@@ -115,49 +106,6 @@ class MLImage {
         }
     }
 
-    extractFeature (image) {
-        image.width = IMAGE_SIZE;
-        image.height = IMAGE_SIZE;
-        const tImage = tf.browser.fromPixels(image);
-        const tActivation = this.mobilenet.infer(tImage, 'conv_preds');
-        tImage.dispose();
-        return tActivation;
-    }
-
-    _classifyImage (tActivation) {
-        // console.log('image pic', image);
-        // const tActivation = this.extractFeature(image);
-        tActivation = JSON.parse(tActivation);
-        console.log('image tActivation', tActivation);
-        const prediction = this.targetModel.predict(tActivation);
-
-        const predictions = prediction.dataSync();
-        const arrPredictions = Array.from(predictions);
-        const results = [];
-        for (let i = 0; i < arrPredictions.length; i++) {
-            results.push([this.labels[i], arrPredictions[i]]);
-        }
-        results.sort((a, b) => b[1] - a[1]);
-        tActivation.dispose();
-        console.log('results', results);
-        return results;
-    }
-
-    classifyImage (image) {
-        let retStr = 'NO MODELS';
-        if (this.modelStatus && this.datasetStatus) {
-            retStr = this._classifyImage(image).then(r => r[0][0], e => e);
-        }
-        return retStr;
-    }
-
-    confidenceImage (image) {
-        let retStr = 'NO MODELS';
-        if (this.modelStatus && this.datasetStatus) {
-            retStr = this._classifyImage(image).then(r => r[0][1], e => e);
-        }
-        return retStr;
-    }
 }
 
 module.exports = MLImage;

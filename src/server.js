@@ -126,19 +126,7 @@ class MLServer extends Emitter{
             const reqtype = req.params.reqtype; // 1:classify 2:confidence
 
             let resStr;
-            if (type === this.mlImage.type) {
-                const src = req.body.pic;
-                console.log('pic', src);
-                if (reqtype === '1') {
-                    resStr = this.mlImage.classifyImage(src);
-                } else if (reqtype === '2') {
-                    resStr = this.mlImage.confidenceImage(src);
-                } else {
-                    resStr = 'COMMAND ERROR';
-                }
-                console.log('resStr', resStr);
-                res.send(resStr);
-            } else if (type === this.mlText.type) {
+            if (type === this.mlText.type) {
                 const text = req.body.text;
                 console.log('text', text);
                 if (reqtype === '1') {
@@ -148,8 +136,8 @@ class MLServer extends Emitter{
                 } else {
                     resStr = 'COMMAND ERROR';
                 }
-                console.log('resStr', resStr);
-                res.send(resStr);
+                resStr = {res: resStr};
+                res.send(JSON.stringify(resStr));
             }
         });
 
