@@ -29,6 +29,7 @@
     "hash-files": "^1.1.1",
     "lodash": "^4.17.21",
     "ml5": "^0.10.5",
+    "multiparty": "^4.2.3",
     "node-fetch": "^2.6.7",
     "node-fetch-progress": "^1.0.2",
     "openblock-parse-release-message": "0.0.1",
@@ -46,5 +47,20 @@
     "progress": "^2.0.3",
     "rimraf": "^3.0.2",
     "transifex": "^1.6.6"
-  }
+  },
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aopu-edu/openblock-learningml.git"
+  },
+  "keywords": [
+    "openblock"
+  ],
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/aopu-edu/openblock-learningml/issues"
+  },
+  "homepage": "https://github.com/aopu-edu/openblock-learningml#readme"
 }
