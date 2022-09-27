@@ -154,7 +154,7 @@ class MLServer extends Emitter{
                 try {
                     if (err) {
                         console.log(err);
-                        res.send('failed');
+                        // res.send('failed');
                     }
                     const jsonFile = files['model.json'][0];
                     let newPath = `${form.uploadDir}/${jsonFile.originalFilename}`;
@@ -167,11 +167,11 @@ class MLServer extends Emitter{
                     // 同步重命名文件名 fs.renameSync(oldPath, newPath)
                     // oldPath  不得作更改，使用默认上传路径就好
                     fs.renameSync(binFile.path, newPath);
-                    res.send('ok');
+                    // res.send('ok');
                     // this.mlImage.loadTargetModel();
                 } catch (e) {
                     console.log(e);
-                    res.send('failed');
+                    // res.send('failed');
                 }
             });
         });
@@ -180,7 +180,7 @@ class MLServer extends Emitter{
         this._app.post('/save/:reqtype', (req, res) => {
             console.log('post /save/:reqtype');
             const reqtype = req.params.reqtype; // image or text
-            res.send('ok');
+            // res.send('ok');
             console.log('reqtype', reqtype);
             if (reqtype === 'image') {
                 const dataSet = JSON.parse(req.body.imageDataset);
