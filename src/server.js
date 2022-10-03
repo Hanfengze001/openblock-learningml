@@ -5,15 +5,12 @@ const fs = require('fs');
 const fetch = require('node-fetch');
 const https = require('https');
 const clc = require('cli-color');
-const multiparty = require('multiparty');
 
-const MLImage = require('./MLImage');
-const MLText = require('./MLText');
-
+const LMLServer = require('./websocket');
 
 const exarttemp = require('express-art-template');
-// 路由文件
-const indexRouter = require('./router');
+
+const { resolve } = require('path');
 
 /**
  * Configuration the default host.
@@ -55,8 +52,7 @@ class MLServer extends Emitter{
         this._host = DEFAULT_HOST;
         this._port = DEFAULT_PORT;
 
-        this.mlImage = new MLImage();
-        this.mlText = new MLText();
+        this.webServer = new LMLServer();
     }
 
     isSameServer (host, port) {
@@ -75,6 +71,22 @@ class MLServer extends Emitter{
                 })
                 .catch(err => reject(err));
         });
+    }
+
+    classifyFromLml(operation, src) {
+        let result = 'No Model';
+        if (this.webServer.getState() !== 1) {
+            operation = 'No Model';
+        }
+        if (operation !== 'No Model') {
+            return new Promise(resolve => {
+                this.webServer.lmlRequest(operation, [src], result => {
+                    console.log('result', result);
+                    resolve(result);
+                });
+            });
+        }
+        return Promise.resolve(result);
     }
 
     /**
@@ -108,16 +120,10 @@ class MLServer extends Emitter{
         this._app.use(express.static(`${this._mlPath}`));
         this._app.engine('html', exarttemp);
 
-        // 使用路由
-        this._app.use(indexRouter);
-
-        // this._app.get('/', (req, res) => {
-        //     res.send(SERVER_NAME);
-        // });
-        this._app.get('/labels', (req, res) => {
-            res.send(JSON.stringify(this.mlImage.labels));
+        this._app.get('/', (req, res) => {
+            res.send(SERVER_NAME);
         });
-
+        
         // 执行分析算法
         this._app.post('/get/:type/:reqtype', (req, res) => {
             console.log('post /get/:type/:reqtype');
@@ -125,70 +131,39 @@ class MLServer extends Emitter{
             const type = req.params.type; // image or text
             const reqtype = req.params.reqtype; // 1:classify 2:confidence
 
-            let resStr;
-            if (type === this.mlText.type) {
-                const text = req.body.text;
-                console.log('text', text);
+            if (type === 'image') {
+                const src = req.body.pic;
+                let operation = 'No Model';
                 if (reqtype === '1') {
-                    resStr = this.mlText.classifyText(text);
+                    operation = 'classify_image';
                 } else if (reqtype === '2') {
-                    resStr = this.mlText.confidenceText(text);
-                } else {
-                    resStr = 'COMMAND ERROR';
+                    operation = 'confidence_image';
                 }
-                resStr = {res: resStr};
-                res.send(JSON.stringify(resStr));
-            }
-        });
+                this.classifyFromLml(operation, src)
+                    .then(resType => {
+                        const result = {
+                            type: resType
+                        };
+                        console.log('result 1', result);
+                        res.send(JSON.stringify(result));
+                    })
+            } else if (type === 'text') {
+                const text = req.body.text;
 
-        // 上传model文件
-        this._app.post('/upload', async (req, res) => {
-            console.log('post /upload');
-            /* 生成multiparty对象，并配置上传目标路径 */
-            const form = new multiparty.Form();
-            form.encoding = 'utf-8';
-            form.uploadDir = './learningml';
-            // 设置文件大小限制
-            // form.maxFilesSize = 1 * 1024 * 1024;
-            form.parse(req, (err, fields, files) => {
-                try {
-                    if (err) {
-                        console.log(err);
-                        // res.send('failed');
-                    }
-                    const jsonFile = files['model.json'][0];
-                    let newPath = `${form.uploadDir}/${jsonFile.originalFilename}`;
-                    // 同步重命名文件名 fs.renameSync(oldPath, newPath)
-                    // oldPath  不得作更改，使用默认上传路径就好
-                    fs.renameSync(jsonFile.path, newPath);
-                    console.log('path', newPath);
-                    const binFile = files['model.weights.bin'][0];
-                    newPath = `${form.uploadDir}/${binFile.originalFilename}`;
-                    // 同步重命名文件名 fs.renameSync(oldPath, newPath)
-                    // oldPath  不得作更改，使用默认上传路径就好
-                    fs.renameSync(binFile.path, newPath);
-                    // res.send('ok');
-                    // this.mlImage.loadTargetModel();
-                } catch (e) {
-                    console.log(e);
-                    // res.send('failed');
+                let operation = 'No Model';
+                if (reqtype === '1') {
+                    operation = 'classify_text';
+                } else if (reqtype === '2') {
+                    operation = 'confidence_text';
                 }
-            });
-        });
-
-        // 上传label和dataset
-        this._app.post('/save/:reqtype', (req, res) => {
-            console.log('post /save/:reqtype');
-            const reqtype = req.params.reqtype; // image or text
-            // res.send('ok');
-            console.log('reqtype', reqtype);
-            if (reqtype === 'image') {
-                const dataSet = JSON.parse(req.body.imageDataset);
-                this.mlImage.updateDataSet(JSON.parse(req.body.imageLabels),
-                    dataSet.labels, dataSet.dataArray);
-            } else if (reqtype === 'text') {
-                console.log('model', req.body.model);
-                this.mlText.updateModel(req.body.model);
+                this.classifyFromLml(operation, text)
+                    .then(resType => {
+                        const result = {
+                            type: resType
+                        };
+                        console.log('result 1', result);
+                        res.send(JSON.stringify(result));
+                    })
             }
         });
 
