@@ -2,6 +2,15 @@
 const Emitter = require('events');
 const { json } = require('express');
 const ws = require('nodejs-websocket');
+const clc = require('cli-color');
+
+const SERVER_PORT = 20114;
+
+/**
+ * The time interval for retrying to open the port after the port is occupied by another openblock-learningml server.
+ * @readonly
+ */
+ const REOPEN_INTERVAL = 1000 * 1;
 
 class LMLWebSocket extends Emitter {
     constructor () {
@@ -25,7 +34,18 @@ class LMLWebSocket extends Emitter {
                 console.log('connection err', err);
             });
         });
-        this.server.listen(20114);
+        this.server.on('error', err => {
+            console.log('listen 20114 err', err);
+            setTimeout(() => {
+                this.server.close();
+                this.server.listen(SERVER_PORT);
+            }, REOPEN_INTERVAL);
+            this.emit('port-in-use');
+        });
+        this.server.listen(SERVER_PORT, '0.0.0.0', () => {
+            this.emit('ready');
+            console.info(clc.green(`Learningml websocker server start successfully, socket listen on: ws://0.0.0.0:${SERVER_PORT}`));
+        });
     }
 
     uuidv4 () {
